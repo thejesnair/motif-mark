@@ -27,12 +27,43 @@ args = get_args()
 motif_file = args.motif
 #image = args.outfile
 
+## HELPER FXN ##
+
+# read in fasta
+def read_fasta(input_fa:str) -> str:
+    ''' Parses a FASTA file and returns a list of (header, sequence) tuples
+        Handles multiline sequences and stores seq as oneline '''
+    
+    current_header = None
+    current_seq = []
+    records = []
+    
+    with open(input_fa, 'r') as in_fa:
+        for i, line in enumerate(in_fa):
+            line = line.strip()
+            if line.startswith('>'):    # new header, new record starting
+                if current_header is not None:      # if there is already have a record in store, save
+                    records.append((current_header, ''.join(current_seq)))
+
+                # start tracking new record
+                current_header = line
+                current_seq = []
+            else:
+                current_seq.append(line)        # reading seq lines for the current record
+        
+        # Saving last record
+        if current_header is not None:
+            records.append((current_header, ''.join(current_seq)))
+    return records
+
 
 # motifs list
 with open(motif_file) as f:
     motifs = [line.strip() for line in f] # strips trailing space, adds motifs to SET
 
 print(motifs) #check that properly pulls motifs
+
+## CLASSES ##
 
 # create Motif objects 
 class Motif:
@@ -83,7 +114,7 @@ class Motif:
         self.lookahead_overlap = self.build_lookahead_overlap_regex()
 
     ## METHODS
-    def build_regex_body(self):
+    def build_regex_body(self) -> str:
         regex_exp = []
         for char in self.pattern.upper():       # upper bc of dict
             if char in self.degenerate_map:
@@ -92,14 +123,18 @@ class Motif:
                 regex_exp.append(char)
         return ''.join(regex_exp)
 
-    def build_lookahead_overlap_regex(self):
+    def build_lookahead_overlap_regex(self) -> str:
         return "(?=(" + self.regex_body + "))"      # (?=...) is a lookahead assertion!
 
-motif1 = Motif("ycgy", "DNA")
-motif1.regex_body
-
 class SplicingRegion:
-    pass
+    ''' Represents FASTA record
+        Where I'm looking for motifs '''
+    
+    def __init__(self, header, sequence):
+        self.header = header
+        self.sequence = self.oneline_fasta()       # original sequence
+        self.sequence_upper = sequence.upper()    # to identify motifs
+
 
 class MotifLocation:
     pass
@@ -109,4 +144,3 @@ class MotifScanner:
 
 class MotifMarkRenderer:
     pass
-
