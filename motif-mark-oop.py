@@ -79,16 +79,24 @@ class Motif:
         self.length = len(self.pattern)
 
         # build regex strings
-        self.regex_body = None # WILL BUILD LATER
-        self.lookahead_overlap = None # WILL BUILD LATER
+        self.regex_body = self.build_regex_body()       # call method
+        self.lookahead_overlap = self.build_lookahead_overlap_regex()
 
     ## METHODS
     def build_regex_body(self):
-        pass
+        regex_exp = []
+        for char in self.pattern.upper():       # upper bc of dict
+            if char in self.degenerate_map:
+                regex_exp.append("[" + self.degenerate_map[char] + "]")
+            else:
+                regex_exp.append(char)
+        return ''.join(regex_exp)
 
     def build_lookahead_overlap_regex(self):
-        pass
+        return "(?=(" + self.regex_body + "))"      # (?=...) is a lookahead assertion!
 
+motif1 = Motif("ycgy", "DNA")
+motif1.regex_body
 
 class SplicingRegion:
     pass
