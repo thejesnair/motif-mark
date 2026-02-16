@@ -178,7 +178,7 @@ class SplicingRegion:
                 i = j
         return (self.introns, self.exons)
 
-# objects
+# objects needed for MotifScanner
 regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
 mode = regions[0].mode    
 # ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
@@ -186,10 +186,49 @@ mode = regions[0].mode
 # .mode and not .mode() b/c pulling value not running fxn
 motif_objects = [Motif(motif, mode) for motif in motifs]
 
+# region object contains: uppercase sequence, sequence, header
+# motif object contains: lookahead regex, length, regex
 
 class MotifScanner:
     ''' Scans sequence for motifs and returns identififed locations/hits '''
+    
+    def __init__(self, region, motifs):
+        self.region = region
+        self.motifs = motifs
 
+    ## METHODS
+    def scan(self):
+        hits = {}   # dict of key,value pairs motif, hits
+        motif_n = 0
+        start = 0
+        end = 0
+        for motif in self.motifs:
+            motif_n = motif.length
+            pattern = motif.lookahead_overlap   # pull out regex expression for lookahead assertion
+            hits[motif.pattern] = []
+
+# TESTING
+
+header = ">test"
+sequence = "aaGGcccTTTaGGGGG"
+
+test_region = SplicingRegion(header, sequence)
+print(test_region.header)
+print(test_region.sequence_upper)
+print(test_region.mode)
+
+mode = test_region.mode
+m1 = Motif("YGCY", mode)
+
+print(m1.pattern)
+print(m1.lookahead_overlap)
+print(m1.length)
+scanner = MotifScanner(test_region, [m1])
+
+print(scanner.region.header)
+print(len(scanner.motifs))
+
+print(scanner.scan())
 
 class MotifLocation:
     ''' Holds record for motif hit 
