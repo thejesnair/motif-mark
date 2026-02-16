@@ -9,21 +9,6 @@ Script outputs both an svg and png
 import argparse
 import re # regex
 
-def get_args():
-    '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.'''
-    parser = argparse.ArgumentParser(description=
-                                     "Program to generate an image of motifs along a gene")
-    parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
-    parser.add_argument("-m", "--motif", help="deduped SAM file, absolute path", type=str, required=True)
-    #parser.add_argument("-o", "--outfile", help = "name for outputted motif image (png)", type=str, required=True)
-
-    return parser.parse_args()
-
-args = get_args()
-input_fasta = args.file
-motif_file = args.motif
-#image = args.outfile
-
 ## HELPER FXN ##
 
 # read in fasta
@@ -53,13 +38,6 @@ def read_fasta(input_fa:str) -> list[tuple[str,str]]:
             records.append((current_header, ''.join(current_seq)))
     return records
 
-records = read_fasta(input_fasta)
-
-# motifs list
-with open(motif_file) as f:
-    motifs = [line.strip() for line in f] # strips trailing space, adds motifs to list
-
-print(motifs) #check that properly pulls motifs
 
 ## CLASSES ##
  
@@ -178,16 +156,6 @@ class SplicingRegion:
                 i = j
         return (self.introns, self.exons)
 
-# objects needed for MotifScanner
-regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
-mode = regions[0].mode    
-# ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
-# only check once b/c all types should be same in the fasta file
-# .mode and not .mode() b/c pulling value not running fxn
-motif_objects = [Motif(motif, mode) for motif in motifs]
-
-# region object contains: uppercase sequence, sequence, header
-# motif object contains: lookahead regex, length, regex
 
 class MotifScanner:
     ''' Scans sequence for motifs and returns identififed locations/hits '''
@@ -207,29 +175,6 @@ class MotifScanner:
             pattern = motif.lookahead_overlap   # pull out regex expression for lookahead assertion
             hits[motif.pattern] = []
 
-# TESTING
-
-header = ">test"
-sequence = "aaGGcccTTTaGGGGG"
-
-test_region = SplicingRegion(header, sequence)
-print(test_region.header)
-print(test_region.sequence_upper)
-print(test_region.mode)
-
-mode = test_region.mode
-m1 = Motif("YGCY", mode)
-
-print(m1.pattern)
-print(m1.lookahead_overlap)
-print(m1.length)
-scanner = MotifScanner(test_region, [m1])
-
-print(scanner.region.header)
-print(len(scanner.motifs))
-
-print(scanner.scan())
-
 class MotifLocation:
     ''' Holds record for motif hit 
         Where the motif is found '''
@@ -237,3 +182,66 @@ class MotifLocation:
 
 class MotifMarkRenderer:
     pass
+
+
+def main():
+
+    def get_args():
+        '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.'''
+        parser = argparse.ArgumentParser(description=
+                                        "Program to generate an image of motifs along a gene")
+        parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
+        parser.add_argument("-m", "--motif", help="deduped SAM file, absolute path", type=str, required=True)
+        #parser.add_argument("-o", "--outfile", help = "name for outputted motif image (png)", type=str, required=True)
+
+        return parser.parse_args()
+
+    args = get_args()
+    input_fasta = args.file
+    motif_file = args.motif
+    #image = args.outfile
+    
+    records = read_fasta(input_fasta)
+
+    # motifs list
+    with open(motif_file) as f:
+        motifs = [line.strip() for line in f] # strips trailing space, adds motifs to list
+
+    print(motifs) #check that properly pulls motifs
+
+    # objects needed for MotifScanner
+    regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
+    mode = regions[0].mode    
+    # ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
+    # only check once b/c all types should be same in the fasta file
+    # .mode and not .mode() b/c pulling value not running fxn
+    motif_objects = [Motif(motif, mode) for motif in motifs]
+
+    # region object contains: uppercase sequence, sequence, header
+    # motif object contains: lookahead regex, length, regex
+
+
+if __name__ == "__main__":
+    #main()
+    
+    # TESTING
+    header = ">test"
+    sequence = "aaGGcccTTTaGGGGG"
+
+    test_region = SplicingRegion(header, sequence)
+    print(test_region.header)
+    print(test_region.sequence_upper)
+    print(test_region.mode)
+
+    mode = test_region.mode
+    m1 = Motif("YGCY", mode)
+
+    print(m1.pattern)
+    print(m1.lookahead_overlap)
+    print(m1.length)
+    scanner = MotifScanner(test_region, [m1])
+
+    print(scanner.region.header)
+    print(len(scanner.motifs))
+
+    print(scanner.scan())
