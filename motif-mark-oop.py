@@ -166,14 +166,20 @@ class MotifScanner:
 
     ## METHODS
     def scan(self):
+        ''' Scans sequence for motifs, returns dict of {motif: [hit]} pairs '''
         hits = {}   # dict of key,value pairs motif, hits
-        motif_n = 0
-        start = 0
-        end = 0
+        seq = self.region.sequence_upper
+
         for motif in self.motifs:
-            motif_n = motif.length
             pattern = motif.lookahead_overlap   # pull out regex expression for lookahead assertion
-            hits[motif.pattern] = []
+            hits[motif.pattern] = []    # initialize empty list for each motif pattern
+
+            for match in re.finditer(pattern, seq): # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
+                start = match.start()
+                end = start + motif.length  # comes from self.length in Motif class
+                hits[motif.pattern].append([start, end])    # can append list to empty list value in dict
+        return hits
+
 
 class MotifLocation:
     ''' Holds record for motif hit 
@@ -223,12 +229,9 @@ def main():
 
 if __name__ == "__main__":
     #main()
-    
-    # TESTING
-    header = ">test"
-    sequence = "aaGGcccTTTaGGGGG"
 
-    test_region = SplicingRegion(header, sequence)
+    # TESTING
+    test_region = SplicingRegion(">test", "aaGGcccTTTaGGGGG")
     print(test_region.header)
     print(test_region.sequence_upper)
     print(test_region.mode)
