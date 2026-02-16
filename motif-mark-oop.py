@@ -57,7 +57,7 @@ records = read_fasta(input_fasta)
 
 # motifs list
 with open(motif_file) as f:
-    motifs = [line.strip() for line in f] # strips trailing space, adds motifs to SET
+    motifs = [line.strip() for line in f] # strips trailing space, adds motifs to list
 
 print(motifs) #check that properly pulls motifs
 
@@ -178,11 +178,22 @@ class SplicingRegion:
                 i = j
         return (self.introns, self.exons)
 
+# objects
+regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
+mode = regions[0].mode    
+# ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
+# only check once b/c all types should be same in the fasta file
+# .mode and not .mode() b/c pulling value not running fxn
+motif_objects = [Motif(motif, mode) for motif in motifs]
 
-class MotifLocation:
-    pass
 
 class MotifScanner:
+    ''' Scans sequence for motifs and returns identififed locations/hits '''
+
+
+class MotifLocation:
+    ''' Holds record for motif hit 
+        Where the motif is found '''
     pass
 
 class MotifMarkRenderer:
