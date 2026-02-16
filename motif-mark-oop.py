@@ -24,14 +24,14 @@ def read_fasta(input_fa:str) -> list[tuple[str,str]]:
         for line in in_fa:
             line = line.strip()
             if line.startswith('>'):    # new header, new record starting
-                if current_header is not None:      # if there is already have a record in store, save
+                if current_header is not None:  # if there is already have a record in store, save
                     records.append((current_header, ''.join(current_seq)))
 
                 # start tracking new record
                 current_header = line
                 current_seq = []
             else:
-                current_seq.append(line)        # reading seq lines for the current record
+                current_seq.append(line)    # reading seq lines for the current record
         
         # Saving last record
         if current_header is not None:
@@ -69,9 +69,9 @@ class Motif:
         self.mode = mode
 
         # normalize
-        self.pattern = motif.upper() # normalize for checking
+        self.pattern = motif.upper()    # normalize for checking
         if mode == "DNA":
-            self.degenerate_map = self.DNA_degenerate # have to reference class variables
+            self.degenerate_map = self.DNA_degenerate   # have to reference class variables
             if "U" in self.pattern:
                 raise ValueError("Motif contains U but sequence is DNA")
         elif mode == "RNA":
@@ -84,14 +84,14 @@ class Motif:
         self.length = len(self.pattern)
 
         # build regex strings
-        self.regex_body = self.build_regex_body()       # call method
+        self.regex_body = self.build_regex_body()   # call method
         self.lookahead_overlap = self.build_lookahead_overlap_regex()
 
     ## METHODS
     def build_regex_body(self) -> str:
         ''' Build regex expression for motif '''
         regex_exp = []
-        for char in self.pattern.upper():       # upper bc of dict
+        for char in self.pattern.upper():   # upper bc of dict
             if char in self.degenerate_map:
                 regex_exp.append("[" + self.degenerate_map[char] + "]")
             else:
@@ -100,7 +100,7 @@ class Motif:
 
     def build_lookahead_overlap_regex(self) -> str:
         ''' Build regex expression for lookahead/overlap '''
-        return "(?=(" + self.regex_body + "))"      # (?=...) is a lookahead assertion!
+        return "(?=(" + self.regex_body + "))"  # (?=...) is a lookahead assertion!
 
 class SplicingRegion:
     ''' Represents FASTA record
@@ -108,8 +108,8 @@ class SplicingRegion:
     
     def __init__(self, header: str, sequence: str):
         self.header = header
-        self.sequence = sequence       # original sequence
-        self.sequence_upper = sequence.upper()    # to identify motifs
+        self.sequence = sequence    # original sequence
+        self.sequence_upper = sequence.upper()  # to identify motifs
 
         self.introns = []
         self.exons = []
@@ -136,17 +136,17 @@ class SplicingRegion:
         exon_num = 0
         seq = self.sequence
         n = len(seq)
-        i = 0       # start coordinate
-        j = 0       # 'scanning' end coordinate
+        i = 0   # start coordinate
+        j = 0   # 'scanning' end coordinate
 
         while i < n:
             if seq[i].islower():
-                j = i       # start j at current i location
+                j = i   # start j at current i location
                 while j < n and seq[j].islower():
                     j += 1
                 intron_num += 1
                 self.introns.append((intron_num, i, j))
-                i = j       # move i to j for new location of next region
+                i = j   # move i to j for new location of next region
             elif seq[i].isupper():
                 j = i
                 while j < n and seq[j].isupper():
@@ -166,25 +166,42 @@ class MotifScanner:
 
     ## METHODS
     def scan(self):
-        ''' Scans sequence for motifs, returns dict of {motif: [hit]} pairs '''
-        hits = {}   # dict of key,value pairs motif, hits
+        ''' Scans sequence for motifs, returns list of MotifLocation '''
+        #hits = {}   # dict of key,value pairs motif, hits
         seq = self.region.sequence_upper
+        locations = []
 
         for motif in self.motifs:
             pattern = motif.lookahead_overlap   # pull out regex expression for lookahead assertion
-            hits[motif.pattern] = []    # initialize empty list for each motif pattern
+            #hits[motif.pattern] = []    # initialize empty list for each motif pattern
 
-            for match in re.finditer(pattern, seq): # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
+            for match in re.finditer(pattern, seq):   # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
                 start = match.start()
-                end = start + motif.length  # comes from self.length in Motif class
-                hits[motif.pattern].append([start, end])    # can append list to empty list value in dict
-        return hits
+                end = start + motif.length   # comes from self.length in Motif class
+                #hits[motif.pattern].append([start, end])   # can append list to empty list value in dict
+                location = MotifLocation(
+                    self.region.header,    # comes from splicingregion obj passed into motifscanner
+                    motif.pattern,    # comes from motif object
+                    start,    # from match.start()
+                    end,    # from start + match.length
+                )
+                locations.append(location)
+        return locations
 
 
 class MotifLocation:
-    ''' Holds record for motif hit 
+    ''' Holds record for ONE motif hit
+        "Itemize" motif locations, so it's easier to render final image
+        Interacts with MotifScanner to hold record
         Where the motif is found '''
-    pass
+    
+    # record
+    def __init__(self, header, motif_pattern, start, end):
+        self.header = header
+        self.motif_pattern = motif_pattern
+        self.start = start
+        self.end = end
+
 
 class MotifMarkRenderer:
     pass
@@ -211,9 +228,9 @@ def main():
 
     # motifs list
     with open(motif_file) as f:
-        motifs = [line.strip() for line in f] # strips trailing space, adds motifs to list
+        motifs = [line.strip() for line in f]   # strips trailing space, adds motifs to list
 
-    print(motifs) #check that properly pulls motifs
+    print(motifs)   #check that properly pulls motifs
 
     # objects needed for MotifScanner
     regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
