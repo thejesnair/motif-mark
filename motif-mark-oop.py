@@ -71,7 +71,7 @@ class Motif:
         # normalize
         self.pattern = motif.upper()    # normalize for checking
         if mode == "DNA":
-            self.degenerate_map = self.DNA_degenerate   # have to reference class variables
+            self.degenerate_map = self.DNA_degenerate    # have to reference class variables
             if "U" in self.pattern:
                 raise ValueError("Motif contains U but sequence is DNA")
         elif mode == "RNA":
@@ -91,7 +91,7 @@ class Motif:
     def build_regex_body(self) -> str:
         ''' Build regex expression for motif '''
         regex_exp = []
-        for char in self.pattern.upper():   # upper bc of dict
+        for char in self.pattern.upper():    # upper bc of dict
             if char in self.degenerate_map:
                 regex_exp.append("[" + self.degenerate_map[char] + "]")
             else:
@@ -100,7 +100,7 @@ class Motif:
 
     def build_lookahead_overlap_regex(self) -> str:
         ''' Build regex expression for lookahead/overlap '''
-        return "(?=(" + self.regex_body + "))"  # (?=...) is a lookahead assertion!
+        return "(?=(" + self.regex_body + "))"    # (?=...) is a lookahead assertion!
 
 class SplicingRegion:
     ''' Represents FASTA record
@@ -109,10 +109,9 @@ class SplicingRegion:
     def __init__(self, header: str, sequence: str):
         self.header = header
         self.sequence = sequence    # original sequence
-        self.sequence_upper = sequence.upper()  # to identify motifs
+        self.sequence_upper = sequence.upper()    # to identify motifs
 
-        self.introns = []
-        self.exons = []
+        self.introns, self.exons = [], []
 
         self.mode = self.detect_mode()
         self.find_intron_exon_regions()
@@ -136,17 +135,17 @@ class SplicingRegion:
         exon_num = 0
         seq = self.sequence
         n = len(seq)
-        i = 0   # start coordinate
-        j = 0   # 'scanning' end coordinate
+        i = 0    # start coordinate
+        j = 0    # 'scanning' end coordinate
 
         while i < n:
             if seq[i].islower():
-                j = i   # start j at current i location
+                j = i    # start j at current i location
                 while j < n and seq[j].islower():
                     j += 1
                 intron_num += 1
                 self.introns.append((intron_num, i, j))
-                i = j   # move i to j for new location of next region
+                i = j    # move i to j for new location of next region
             elif seq[i].isupper():
                 j = i
                 while j < n and seq[j].isupper():
@@ -167,18 +166,18 @@ class MotifScanner:
     ## METHODS
     def scan(self):
         ''' Scans sequence for motifs, returns list of MotifLocation '''
-        #hits = {}   # dict of key,value pairs motif, hits
+        #hits = {}    # dict of key,value pairs motif, hits
         seq = self.region.sequence_upper
         locations = []
 
         for motif in self.motifs:
-            pattern = motif.lookahead_overlap   # pull out regex expression for lookahead assertion
+            pattern = motif.lookahead_overlap    # pull out regex expression for lookahead assertion
             #hits[motif.pattern] = []    # initialize empty list for each motif pattern
 
-            for match in re.finditer(pattern, seq):   # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
+            for match in re.finditer(pattern, seq):    # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
                 start = match.start()
-                end = start + motif.length   # comes from self.length in Motif class
-                #hits[motif.pattern].append([start, end])   # can append list to empty list value in dict
+                end = start + motif.length    # comes from self.length in Motif class
+                #hits[motif.pattern].append([start, end])    # can append list to empty list value in dict
                 location = MotifLocation(
                     self.region.header,    # comes from splicingregion obj passed into motifscanner
                     motif.pattern,    # comes from motif object
@@ -204,7 +203,17 @@ class MotifLocation:
 
 
 class MotifMarkRenderer:
-    pass
+
+    def __init__(self):
+        pass
+
+    ## METHODS
+    def assign_lanes(self, locations):
+        pass
+
+    def render(self, region, locations):
+        pass
+
 
 
 def main():
@@ -214,7 +223,7 @@ def main():
         parser = argparse.ArgumentParser(description=
                                         "Program to generate an image of motifs along a gene")
         parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
-        parser.add_argument("-m", "--motif", help="deduped SAM file, absolute path", type=str, required=True)
+        parser.add_argument("-m", "--motif", help="path for file of all possible motifs", type=str, required=True)
         #parser.add_argument("-o", "--outfile", help = "name for outputted motif image (png)", type=str, required=True)
 
         return parser.parse_args()
