@@ -216,6 +216,20 @@ class MotifMarkRenderer:
         
 
     ## METHODS
+    '''
+    high level pseudocode
+
+    1. group motif hits by gene/header
+    2. create cairo image for ONE output image
+    3. for each fasta record create a baseline drawing (stack them vertically)
+        a. get hits for each record
+        b. assign lanes (and overlaps) for record's hits
+        c. draw gene "backbone": introns, exons
+        d. draw motifs using assigned lanes
+    4. draw motif KEY (outside of loop!)
+    5. finish and output image
+    
+    '''
     def assign_lanes(self, locations):
         pass
 
