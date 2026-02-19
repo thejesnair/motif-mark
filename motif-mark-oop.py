@@ -182,7 +182,7 @@ class MotifScanner:
                     self.region.header,    # comes from splicingregion obj passed into motifscanner
                     motif.pattern,    # comes from motif object
                     start,    # from match.start()
-                    end,    # from start + match.length
+                    end    # from start + match.length
                 )
                 locations.append(location)
         return locations
@@ -200,18 +200,26 @@ class MotifLocation:
         self.motif_pattern = motif_pattern
         self.start = start
         self.end = end
+        
+        self.lane = None    # needed for renderer later on
 
 
 class MotifMarkRenderer:
+    ''' Takes in MotifLocation object and renders image
+        Computes lanes for motifs and overlap, renders introns, exons, and motifs '''
 
     def __init__(self):
         pass
+        # not sure if passing lane through here?
+        # defaults for images?
+        # this is used for class to remember variables needed for later
+        
 
     ## METHODS
     def assign_lanes(self, locations):
         pass
 
-    def render(self, region, locations):
+    def render_motifs(self, region, locations):
         pass
 
 
