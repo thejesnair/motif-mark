@@ -237,18 +237,18 @@ class MotifMarkRenderer:
 
         # first, group headers and their hits
         for loc in locations:
-            if loc.header not in grouped:
-                #grouped[loc.header] = []   # creating empty list for new header
-                grouped[loc.header].append(loc)    # stores the full tuple
+            grouped[loc.header].append(loc)    # stores the full tuple
 
         # second, sort hits by start position -> useful for lane assignment later on
         for header in grouped:
-            grouped[header].sort(key=self.sort_by_start)     # https://www.geeksforgeeks.org/python/python-sort-list-of-list-by-specified-index/
-            # https://docs.python.org/3/howto/sorting.html#key-functions
+            grouped[header].sort(key=lambda loc: loc.start)    
+            # lambda, small inplace fxn: in this case sorting by start loc, takes loc and returns loc.start, sorts by loc.start
+            # some sources:
+                # https://www.geeksforgeeks.org/python/python-sort-list-of-list-by-specified-index/
+                # https://docs.python.org/3/howto/sorting.html#key-functions
+                # https://docs.python.org/3/library/operator.html
         return grouped
     
-    def sort_by_start(self, loc):
-        return loc.start
     def assign_lanes(self, locations):
         pass
 
