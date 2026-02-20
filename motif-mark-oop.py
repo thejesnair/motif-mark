@@ -233,6 +233,8 @@ class MotifMarkRenderer:
     '''
 
     def group_headers(self, locations):
+        ''' Groups genes/records by header and then stores list of all motif hits
+            Sorts hits by start position so that hits are in chronological order left -> right for later lane assignment and drawing '''
         grouped = defaultdict(list)    # initializes an empty list every time a new key is added to dict!
 
         # first, group headers and their hits
@@ -250,6 +252,24 @@ class MotifMarkRenderer:
         return grouped
     
     def assign_lanes(self, locations):
+        ''' Lane assignment for motifs, looks at start, stop locations and determines overlap regions 
+            Ex:
+            hit1 (2,45)
+            hit2 (10,55)
+            hit3 (35,65)
+            hit4 (55, 80)
+
+            lane_ends = [end position of latest hit in lane, order corresponds to respective lane]
+
+            lane 0: hit one
+            lane_ends=[45]
+            hit2, 10 >=45, False, assign to lane 1
+            lane_ends = [45,55]
+            hit3, 35 >=45 and 35>=55, both false, assign to lane 2
+            lane_ends = [45,55,65]
+            hit4, 55 >=45, true, assign to lane 0 (even though overlaps with other motifs, can still be in lane 0)
+            lane_ends = [80,55,60], update lane 0 position
+            '''
         pass
 
     def render_motifs(self, region, locations):
