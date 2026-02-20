@@ -8,6 +8,7 @@ Script outputs both an svg and png
 
 import argparse
 import re # regex
+from collections import defaultdict
 
 ## HELPER FXN ##
 
@@ -228,8 +229,26 @@ class MotifMarkRenderer:
         d. draw motifs using assigned lanes
     4. draw motif KEY (outside of loop!)
     5. finish and output image
-    
+
     '''
+
+    def group_headers(self, locations):
+        grouped = defaultdict(list)    # initializes an empty list every time a new key is added to dict!
+
+        # first, group headers and their hits
+        for loc in locations:
+            if loc.header not in grouped:
+                #grouped[loc.header] = []   # creating empty list for new header
+                grouped[loc.header].append(loc)    # stores the full tuple
+
+        # second, sort hits by start position -> useful for lane assignment later on
+        for header in grouped:
+            grouped[header].sort(key=self.sort_by_start)     # https://www.geeksforgeeks.org/python/python-sort-list-of-list-by-specified-index/
+            # https://docs.python.org/3/howto/sorting.html#key-functions
+        return grouped
+    
+    def sort_by_start(self, loc):
+        return loc.start
     def assign_lanes(self, locations):
         pass
 
@@ -296,3 +315,5 @@ if __name__ == "__main__":
     print(len(scanner.motifs))
 
     print(scanner.scan())
+
+    render = MotifMarkRenderer()
