@@ -209,13 +209,6 @@ class MotifMarkRenderer:
     ''' Takes in MotifLocation object and renders image
         Computes lanes for motifs and overlap, renders introns, exons, and motifs '''
 
-    def __init__(self):
-        pass
-        # not sure if passing lane through here?
-        # defaults for images?
-        # this is used for class to remember variables needed for later
-        
-
     ## METHODS
     '''
     high level pseudocode
@@ -281,9 +274,131 @@ class MotifMarkRenderer:
                 lane_ends.append(end)
         return lanes
 
+    def __init__(self):
+        # default for drawing surface
+        width, height = 800, 800
+        left_margin = 220    # clear space: can place labels in left margin!
+        right_margin = 40
+        row_height = 120    # vertical distance b/w records
+        top_margin = row_height    # set equal to row_height bc I want even spacing b/w records
+        line_width = 3
+
+        # exon
+        exon_height = 16
+
+        # motifs
+        motif_height = 15
+        motif_offset = 25 # above backbone
+        lane_gap = 14   # vertical space b/w lanes
+
+
+        # motif color, records
+        motif_colors = {
+        "YGCY": (.5,.4,.6),
+        "CATAG": (0.388, 0.533, 0.82),
+        "YYYY": (0.96, 0.82, 0.56)
+        }
+
+        # header labels
+        font_size = 16
+        label_x = 80    # position for label in left margin
+
+        # create PNG surface
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        ctx = cairo.Context(surface)
+
+        # background
+        ctx.set_source_rgb(1,1,1)    # need to set white background, default is transparent
+        ctx.paint()
+
+        # draw line
+        ctx.set_source_rgb(0,0,0)    # need to set line color to black
+        ctx.set_line_width(3)
+        #ctx.move_to(100,58)    # (x,y) (0,0 is top left) x: right, y: down
+        #ctx.line_to(420,58)
+        ctx.stroke()
+
+        drawing_margin = width - left_margin - right_margin
+
+        # legend
+        legend_x = width - right_margin - 80
+        legend_y = 30
+        legend_box_size = 14
+        legend_gap = 22
+        #legend_font_size = 14
+
 
     def render_motifs(self, region, locations):
-        pass
+
+    # draw legend box
+    for motif_name, (r,g,b) in motif_colors.items():
+        ctx.set_source_rgb(r,g,b)
+        ctx.rectangle(legend_x, legend_y + 20, legend_box_size, legend_box_size)
+        ctx.fill()
+
+        # text labels
+        ctx.set_source_rgb(0,0,0)
+        ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # this will apply to headers if not changed
+        ctx.set_font_size(font_size)    # will also apply to headers if not changed
+        ctx.move_to(legend_x + legend_box_size +10, legend_y+20 + legend_box_size)
+        ctx.show_text(motif_name)
+
+        legend_y += legend_gap + 20
+
+    for i, (header, length_bp, exons, motifs) in enumerate(records):
+        y = top_margin + (i * row_height)    # space between each record vertically (lane stacking)
+        # i: for each record * row_gap will create even gaps
+
+        x0 = left_margin    # record starting pos
+        x1 = left_margin + length_bp    # genomic length/final ending position
+
+        # drawn backbone
+        ctx.move_to(x0, y)
+        ctx.line_to(x1, y)
+        ctx.stroke()
+
+        # header label
+        ctx.set_source_rgb(0,0,0)
+        #ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        #ctx.set_font_size(font_size)
+        
+        ctx.move_to(label_x, y+5)
+        ctx.show_text(header)
+
+        # exons
+        for (exon_start, exon_end) in exons:
+            exon_x = left_margin + exon_start
+            exon_w = exon_end - exon_start  # how long is exon
+            exon_y = y - (exon_height/2)
+
+            ctx.rectangle(exon_x, exon_y, exon_w, exon_height)  # (x0, y0, x1, y1)
+            ctx.set_source_rgb(0,0,0)   # black fill for now
+            ctx.fill()
+
+        # motifs
+        for (lane_pos, lane_hits) in enumerate(motifs):
+            lane_y = y - motif_offset - lane_pos * lane_gap
+        
+            for (motif_name, motif_start, motif_end) in lane_hits:
+                motif_x = left_margin + motif_start
+                motif_w = motif_end - motif_start
+                motif_y = y - motif_offset
+
+                # draw motif in specified color
+                r,g,b = motif_colors[motif_name]
+                ctx.set_source_rgb(r,g,b)   # draw motif
+                ctx.rectangle(motif_x, motif_y, motif_w, motif_height)
+                ctx.fill()
+                ctx.set_source_rgb(0,0,0)   # change back to black for next record
+
+    surface.write_to_png("motif_mark_test4.png")
+
+
+
+
+
+
+
 
 
 
