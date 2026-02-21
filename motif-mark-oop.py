@@ -243,34 +243,44 @@ class MotifMarkRenderer:
 
         # second, sort hits by start position -> useful for lane assignment later on
         for header in grouped:
-            grouped[header].sort(key=lambda loc: loc.start)    
-            # lambda, small inplace fxn: in this case sorting by start loc, takes loc and returns loc.start, sorts by loc.start
+            grouped[header].sort(key=lambda loc: loc.start)    # (loc.start, loc.end) incase motifs have overlapping starts?
+            # lambda: anonymous, small inplace fxn: in this case sorting by start loc, takes loc and returns loc.start, sorts by loc.start
             # some sources:
                 # https://www.geeksforgeeks.org/python/python-sort-list-of-list-by-specified-index/
                 # https://docs.python.org/3/howto/sorting.html#key-functions
-                # https://docs.python.org/3/library/operator.html
+                # https://docs.python.org/3/library/operator.html key=attrgetter("start") use in future?
         return grouped
     
-    def assign_lanes(self, locations):
-        ''' Lane assignment for motifs, looks at start, stop locations and determines overlap regions 
-            Ex:
-            hit1 (2,45)
-            hit2 (10,55)
-            hit3 (35,65)
-            hit4 (55, 80)
+    def assign_lanes(self, hits):
+        ''' Takes in MotifLocation list of hits and sorts motif hits by start coordinate
+            format: (header, motif, start, end)
+            Assigns lane based on coordinates and overlap
+            Returns list of lanes and their corresponding hits '''
+        lanes = []     # list of lanes: each lane contains a list of hits
+        lane_ends = []     # tracking: holds end position for each lane, 0-based
 
-            lane_ends = [end position of latest hit in lane, order corresponds to respective lane]
+        # loop through all hits, process one at a time
+        for hit in hits:
+            # assign start and stop
+            start = hit.start  # extract coordinates for readability
+            end = hit.end
 
-            lane 0: hit one
-            lane_ends=[45]
-            hit2, 10 >=45, False, assign to lane 1
-            lane_ends = [45,55]
-            hit3, 35 >=45 and 35>=55, both false, assign to lane 2
-            lane_ends = [45,55,65]
-            hit4, 55 >=45, true, assign to lane 0 (even though overlaps with other motifs, can still be in lane 0)
-            lane_ends = [80,55,60], update lane 0 position
-            '''
-        pass
+            hit_placed = False  # tracker: is hit assigned to a lane? assume NO
+            
+            # search for lane to assign hit to
+            for lane_pos in range(len(lane_ends)):  # checking every lane that CURRENTLY exists [0, 1, 2...]
+                if start >= lane_ends[lane_pos]:    # does hit start AFTER the last hit in this lane ends?
+                    lanes[lane_pos].append(hit)     # YES: add hit for that lane position for drawing later
+                    lane_ends[lane_pos] = end       # AND update the end coord for that lane
+                    hit_placed = True       # update tracker, the hit has been assigned to a lane!
+                    break   # stop checking the other lanes, bc hit has been placed into an appropriate lane
+
+            #  if no lane identified: OVERLAP, hit needs to be assigned to a new lane
+            if not hit_placed:
+                lanes.append([hit])
+                lane_ends.append(end)
+        return lanes
+
 
     def render_motifs(self, region, locations):
         pass
