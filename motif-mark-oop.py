@@ -345,77 +345,79 @@ class MotifMarkRenderer:
         self.legend_y += self.legend_gap
 
 
-    def render_motifs(self, region, locations):
+    def render_motifs(self, regions, locations):
+        grouped = self.group_headers(locations)     # header contains list[MotifLocation]
+        
+        legend_y = self.legend_y    # keep as starting position, will need to rewrite after every loop
 
         # draw legend box
-        for motif_name, (r,g,b) in motif_colors.items():
-            ctx.set_source_rgb(r,g,b)
-            ctx.rectangle(legend_x, legend_y + 20, legend_box_size, legend_box_size)
-            ctx.fill()
+        for motif_name, (r,g,b) in self.motif_colors.items():
+            self.ctx.set_source_rgb(r,g,b)
+            self.ctx.rectangle(self.legend_x, self.legend_y + 20, self.legend_box_size, self.legend_box_size)
+            self.ctx.fill()
 
             # text labels
-            ctx.set_source_rgb(0,0,0)
-            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # this will apply to headers if not changed
-            ctx.set_font_size(font_size)    # will also apply to headers if not changed
-            ctx.move_to(legend_x + legend_box_size +10, legend_y+20 + legend_box_size)
-            ctx.show_text(motif_name)
+            self.ctx.set_source_rgb(0,0,0)
+            self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # this will apply to headers if not changed
+            self.ctx.set_font_size(self.font_size)    # will also apply to headers if not changed
+            self.ctx.move_to(self.legend_x + self.legend_box_size +10, self.legend_y+20 + self.legend_box_size)
+            self.ctx.show_text(motif_name)
 
-            legend_y += legend_gap + 20
+            legend_y += self.legend_gap + 20
+            #self.legend_y += self.legend_gap + 20
 
-        for i, (header, length_bp, exons, motifs) in enumerate(records):
-            y = top_margin + (i * row_height)    # space between each record vertically (lane stacking)
+        for i, region in enumerate(regions):
+            y = self.top_margin + (i * self.row_height)    # space between each record vertically (lane stacking)
             # i: for each record * row_gap will create even gaps
 
-            x0 = left_margin    # record starting pos
-            x1 = left_margin + length_bp    # genomic length/final ending position
+            length_bp = len(region.length)
+            x0 = self.left_margin    # record starting pos
+            x1 = self.left_margin + length_bp  # genomic length/final ending position
 
             # drawn backbone
-            ctx.move_to(x0, y)
-            ctx.line_to(x1, y)
-            ctx.stroke()
+            self.ctx.move_to(x0, y)
+            self.ctx.line_to(x1, y)
+            self.ctx.stroke()
 
             # header label
-            ctx.set_source_rgb(0,0,0)
+            self.ctx.set_source_rgb(0,0,0)
             #ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
             #ctx.set_font_size(font_size)
             
-            ctx.move_to(label_x, y+5)
-            ctx.show_text(header)
+            self.ctx.move_to(self.label_x, y+5)
+            self.ctx.show_text(region.header)
 
             # exons
-            for (exon_start, exon_end) in exons:
-                exon_x = left_margin + exon_start
+            for (exon_start, exon_end) in region.exons:
+                exon_x = self.left_margin + exon_start
                 exon_w = exon_end - exon_start  # how long is exon
-                exon_y = y - (exon_height/2)
+                exon_y = y - (self.exon_height/2)
 
-                ctx.rectangle(exon_x, exon_y, exon_w, exon_height)  # (x0, y0, x1, y1)
-                ctx.set_source_rgb(0,0,0)   # black fill for now
-                ctx.fill()
+                self.ctx.rectangle(exon_x, exon_y, exon_w, self.exon_height)  # (x0, y0, x1, y1)
+                self.ctx.set_source_rgb(0,0,0)   # black fill for now
+                self.ctx.fill()
 
-            # motifs
-            for (lane_pos, lane_hits) in enumerate(motifs):
-                lane_y = y - motif_offset - lane_pos * lane_gap
+            # motifs -> lanes
+            hits = grouped.get(region.header, [])
+            lanes = self.assign_lanes(hits)
+
+            for (lane_pos, lane_hits) in enumerate(lanes):
+                lane_y = y - self.motif_offset - lane_pos * self.lane_gap
             
-                for (motif_name, motif_start, motif_end) in lane_hits:
-                    motif_x = left_margin + motif_start
-                    motif_w = motif_end - motif_start
-                    motif_y = y - motif_offset
+                for hit in lane_hits:
+                    motif_names = hit.motif
+                    motif_x = self.left_margin + hit.start
+                    motif_w = hit.end - hit.start
+                    motif_y = y - self.motif_offset
 
                     # draw motif in specified color
-                    r,g,b = motif_colors[motif_name]
-                    ctx.set_source_rgb(r,g,b)   # draw motif
-                    ctx.rectangle(motif_x, motif_y, motif_w, motif_height)
-                    ctx.fill()
-                    ctx.set_source_rgb(0,0,0)   # change back to black for next record
+                    r,g,b = self.motif_colors[motif_name]
+                    self.ctx.set_source_rgb(r,g,b)   # draw motif
+                    self.ctx.rectangle(motif_x, motif_y, motif_w, self.motif_height)
+                    self.ctx.fill()
+                    self.ctx.set_source_rgb(0,0,0)   # change back to black for next record
 
-        surface.write_to_png("motif_mark_test4.png")
-
-
-
-
-
-
-
+        self.surface.write_to_png("Figure_1.png")    # hardcoded for now, can improve in future with argparse
 
 
 
