@@ -14,20 +14,21 @@ from pathlib import Path    # so I can extract name for output image
 
 ## ARGPARSE ##
 def get_args():
-    '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.
+    '''Takes in command line arguments for paths to motifs file and FASTA file
        Note: Script requires pycairo installation to run '''
     parser = argparse.ArgumentParser(description=
                                     "Program to generate an image of motifs along a gene")
     parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
-    parser.add_argument("-m", "--motif", help="path for txt file of all possible motifs", type=str, required=True)
+    parser.add_argument("-m", "--motif", help="path for txt file of possible motifs", type=str, required=True)
 
     return parser.parse_args()
 
 ## HELPER FXN ##
 # read in fasta
 def read_fasta(input_fa:str) -> list[tuple[str,str]]:
-    ''' Parses a FASTA file and returns a list of (header, sequence) tuples
-        Handles multiline sequences and stores seq as oneline '''
+    ''' Parses FASTA file, handles multiline sequences and stores seq as oneline
+        Returns: 
+            list[(header, sequence)] '''
     
     current_header = None
     current_seq = []
@@ -141,7 +142,8 @@ class SplicingRegion:
 
     def find_intron_exon_regions(self):
         ''' Determines coordinates of introns and exons
-            Tuple: Intron/exon number, start pos, end pos '''
+            Returns for introns and exons:
+                list[(number, start pos, end pos)] '''
 
         intron_num = 0
         exon_num = 0
@@ -177,7 +179,10 @@ class MotifScanner:
 
     ## METHODS
     def scan(self):
-        ''' Scans sequence for motifs, returns list of MotifLocation '''
+        ''' Scans sequence for motifs
+            Uses MotifLocation class to hold record
+            Returns:
+                list[MotifLocation(header, motif pattern, start coord, end coord)] '''
         #hits = {}    # dict of key,value pairs motif, hits
         seq = self.region.sequence_upper
         locations = []
@@ -218,7 +223,10 @@ class MotifLocation:
 
 class MotifMarkRenderer:
     ''' Takes in MotifLocation object and renders image
-        Computes lanes for motifs and overlap, renders introns, exons, and motifs '''
+        Computes lanes for motifs and overlap, renders introns, exons, and motifs
+        Returns:
+            Hits, sorted by header and chronological order
+            Lane assignments for hits '''
 
     ## METHODS
     def group_headers(self, locations):
@@ -244,7 +252,8 @@ class MotifMarkRenderer:
         ''' Takes in MotifLocation list of hits and sorts motif hits by start coordinate
             format: (header, motif, start, end)
             Assigns lane based on coordinates and overlap
-            Returns list of lanes and their corresponding hits '''
+            Returns:
+                List of lanes and corresponding hits '''
         lanes = []     # list of lanes: each lane contains a list of hits
         lane_ends = []     # tracking: holds end position for each lane, 0-based
 
@@ -273,7 +282,7 @@ class MotifMarkRenderer:
     # IMAGE RENDERING
     def __init__(self, locations):
         # default for drawing surface
-        self.width, self.height = 1200, 850 # W x H
+        self.width, self.height = 1200, 850 # L x H
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
         self.row_height = 200    # vertical distance b/w records
@@ -291,20 +300,20 @@ class MotifMarkRenderer:
 
         # motif color, records
         ''' Note: Only four motifs in assignment so four colors here.
-            Future changes to this script will need to potentially account for unknown number of motifs '''
+            Future changes to this script will need to for unknown number of motifs with expanded color palette + safe random color generator? '''
         self.motif_palette = [      # https://rgbcolorpicker.com/0-1
             (0.5, 0.4, 0.6),        # purple
-            (0.30, 0.60, 0.85),   # blue
+            (0.30, 0.60, 0.85),     # blue
             (0.87, 0.68, 0.33),     # orangey
-            (0.36, 0.63, 0.58)       # teal
+            (0.36, 0.63, 0.58)      # teal
         ]
 
-        self.motif_colors = {}
+        self.motif_colors = {}      # motifs and assigned colors
 
         for loc in locations:
             motif = loc.motif_pattern
-            if motif not in self.motif_colors:
-                index = len(self.motif_colors) #% len(self.motif_palette)    # if uneven num of motifs + colors, assign pos
+            if motif not in self.motif_colors:      # if color NOT assigned
+                index = len(self.motif_colors) #% len(self.motif_palette)    # commented out code: if uneven num of motifs + colors, assign pos
                 self.motif_colors[motif] = self.motif_palette[index]
 
 
@@ -313,8 +322,8 @@ class MotifMarkRenderer:
         self.label_x = 80    # position for label in left margin
 
         # create PNG surface
-        self.scale = 2
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width*self.scale, self.height*self.scale)
+        self.scale = 2  # scale up because image seemed small since motifs are small
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width*self.scale, self.height*self.scale)   # for png output
         self.ctx = cairo.Context(self.surface)
         self.ctx.scale(self.scale, self.scale)
 
@@ -359,8 +368,7 @@ class MotifMarkRenderer:
     def render_motifs(self, regions, locations, output_png):
         grouped = self.group_headers(locations)     # header contains list[MotifLocation]
         
-        legend_y = self.legend_y  + 2.4 * self.legend_gap   # keep as starting position, will need to rewrite after every loop
-        #legend_y += self.legend_y   # space b/w exon label and motif labels
+        legend_y = self.legend_y  + 2.4 * self.legend_gap   # space b/w exon label and motif labels
         
         # draw legend box
         for motif_name, (r,g,b) in self.motif_colors.items():
@@ -375,7 +383,7 @@ class MotifMarkRenderer:
             self.ctx.move_to(self.legend_x + self.legend_box_size +10, legend_y + self.legend_box_size)
             self.ctx.show_text(motif_name)
 
-            legend_y += self.legend_gap + 5
+            legend_y += self.legend_gap + 5     # space between motif labels
 
         for i, region in enumerate(regions):
             y = self.top_margin + (i * self.row_height)    # space between each record vertically (lane stacking)
@@ -392,8 +400,6 @@ class MotifMarkRenderer:
 
             # header label
             self.ctx.set_source_rgb(0,0,0)
-            #ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            #ctx.set_font_size(font_size)
             
             self.ctx.move_to(self.label_x, y-140)   # HEADER SPACING FROM RECORD
             self.ctx.show_text(region.header)
@@ -401,7 +407,7 @@ class MotifMarkRenderer:
             # exons
             for (_, exon_start, exon_end) in region.exons:  # _ means intentionally not using this value! dont need exon_num for rendering
                 exon_x = self.left_margin + exon_start
-                exon_w = exon_end - exon_start  # how long is exon
+                exon_w = exon_end - exon_start  # how long is exon?
                 exon_y = y - (self.exon_height/2)
 
                 self.ctx.rectangle(exon_x, exon_y, exon_w, self.exon_height)  # (x0, y0, x1, y1)
@@ -428,8 +434,7 @@ class MotifMarkRenderer:
                     self.ctx.fill()
                     self.ctx.set_source_rgb(0,0,0)   # change back to black for next record
 
-        self.surface.write_to_png(str(output_png))
-
+        self.surface.write_to_png(output_png)
 
 
 def main():
@@ -438,7 +443,7 @@ def main():
     args = get_args()   
     input_fasta = args.file
     motif_file = args.motif
-    output_png = Path(input_fasta).with_suffix(".png")
+    output_png = Path(input_fasta).with_suffix(".png") # Path pulls exact name from input fasta for output png
 
     records = read_fasta(input_fasta)
 
@@ -448,7 +453,7 @@ def main():
 
     # objects needed for MotifScanner
     regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
-    mode = regions[0].mode  
+    mode = regions[0].mode  # identify mode for all records, just need to check first record
 
     # normalize motifs (needs to happen AFTER mode assignment)
     if mode == "DNA":
@@ -456,9 +461,6 @@ def main():
     elif mode == "RNA":
         motif_strings = [m.upper().replace("T", "U") for m in motif_strings]
 
-    # ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
-    # only check once b/c all types should be same in the fasta file
-    # .mode and not .mode() b/c pulling value not running fxn
     motif_objects = [Motif(motif, mode) for motif in motif_strings]
 
     # region object contains: uppercase sequence, sequence, header
