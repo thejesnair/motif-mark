@@ -273,10 +273,10 @@ class MotifMarkRenderer:
     # IMAGE RENDERING
     def __init__(self, locations):
         # default for drawing surface
-        self.width, self.height = 100, 850 # W x H
+        self.width, self.height = 1200, 850 # W x H
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
-        self.row_height = 150    # vertical distance b/w records
+        self.row_height = 200    # vertical distance b/w records
         self.top_margin = self.row_height    # set equal to row_height bc I want even spacing b/w records
         self.line_width = 3
 
@@ -395,7 +395,7 @@ class MotifMarkRenderer:
             #ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
             #ctx.set_font_size(font_size)
             
-            self.ctx.move_to(self.label_x, y-75)
+            self.ctx.move_to(self.label_x, y-140)   # HEADER SPACING FROM RECORD
             self.ctx.show_text(region.header)
 
             # exons
