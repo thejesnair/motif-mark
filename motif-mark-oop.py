@@ -261,7 +261,7 @@ class MotifMarkRenderer:
         return lanes
 
     # IMAGE RENDERING
-    def __init__(self):
+    def __init__(self, locations):
         # default for drawing surface
         self.width, self.height = 800, 800
         self.left_margin = 220    # clear space: can place labels in left margin!
@@ -280,12 +280,20 @@ class MotifMarkRenderer:
 
 
         # motif color, records
-        ''' CHANGE THIS, DONT HARDCODE '''
-        self.motif_colors = {
-        "YGCY": (.5,.4,.6),
-        "CATAG": (0.388, 0.533, 0.82),
-        "YYYY": (0.96, 0.82, 0.56)
-        }
+        self.motif_palette = [      # https://rgbcolorpicker.com/0-1
+            (0.5, 0.4, 0.6),
+            (0.388, 0.533, 0.82),
+            (0.96, 0.82, 0.56),
+            (0.65, 0.1, 0.25)
+        ]
+
+        self.motif_colors = {}
+
+        for loc in locations:
+            motif = loc.motif
+            if motif not in self.motif_colors:
+                index = len(self.motif_colors) 
+
 
         # header labels
         self.font_size = 16
@@ -299,21 +307,39 @@ class MotifMarkRenderer:
         self.ctx.set_source_rgb(1,1,1)    # need to set white background, default is transparent
         self.ctx.paint()
 
-        # draw line
-        self.ctx.set_source_rgb(0,0,0)    # need to set line color to black
-        self.ctx.set_line_width(3)
-        #ctx.move_to(100,58)    # (x,y) (0,0 is top left) x: right, y: down
-        #ctx.line_to(420,58)
-        self.ctx.stroke()
-
-        self.drawing_margin = self.width - self.left_margin - self.right_margin
-
-        # legend
+        # LEGEND #
         self.legend_x = self.width - self.right_margin - 80
         self.legend_y = 30
         self.legend_box_size = 14
         self.legend_gap = 22
-        #legend_font_size = 14
+
+        # font
+        self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)    # set font type
+        self.ctx.set_font_size(self.font_size)
+
+        # intron key
+        self.line_y = self.legend_y + (self.legend_box_size/2)
+        self.ctx.set_line_width(self.line_width)
+        self.ctx.move_to(self.legend_x, self.line_y)
+        self.ctx.line_to(self.legend_x + self.legend_box_size, self.line_y)
+        # draw line
+        self.ctx.set_source_rgb(0,0,0)    # need to set line color to black
+        self.ctx.set_line_width(3)
+        self.ctx.stroke()
+
+        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, self.legend_y + self.legend_box_size)
+        self.ctx.show_text("Intron")
+
+        self.legend_y += self.legend_gap
+
+        # exon
+        self.ctx.rectangle(self.legend_x, self.legend_y, self.legend_box_size, self.legend_box_size)
+        self.ctx.fill()
+
+        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, self.legend_y + self.legend_box_size)
+        self.ctx.show_text("Exon")
+
+        self.legend_y += self.legend_gap
 
 
     def render_motifs(self, region, locations):
