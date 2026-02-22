@@ -273,7 +273,7 @@ class MotifMarkRenderer:
     # IMAGE RENDERING
     def __init__(self, locations):
         # default for drawing surface
-        self.width, self.height = 1200, 650 # W x H
+        self.width, self.height = 100, 850 # W x H
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
         self.row_height = 150    # vertical distance b/w records
@@ -293,10 +293,10 @@ class MotifMarkRenderer:
         ''' Note: Only four motifs in assignment so four colors here.
             Future changes to this script will need to potentially account for unknown number of motifs '''
         self.motif_palette = [      # https://rgbcolorpicker.com/0-1
-            (0.5, 0.4, 0.6),
-            (0.388, 0.533, 0.82),
-            (0.96, 0.82, 0.56),
-            (0.65, 0.1, 0.25)
+            (0.5, 0.4, 0.6),        # purple
+            (0.30, 0.60, 0.85),   # blue
+            (0.87, 0.68, 0.33),     # orangey
+            (0.36, 0.63, 0.58)       # teal
         ]
 
         self.motif_colors = {}
