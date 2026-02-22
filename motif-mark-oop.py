@@ -280,6 +280,8 @@ class MotifMarkRenderer:
 
 
         # motif color, records
+        ''' Note: Only four motifs in assignment so four colors here.
+            Future changes to this script will need to potentially account for unknown number of motifs '''
         self.motif_palette = [      # https://rgbcolorpicker.com/0-1
             (0.5, 0.4, 0.6),
             (0.388, 0.533, 0.82),
@@ -292,7 +294,8 @@ class MotifMarkRenderer:
         for loc in locations:
             motif = loc.motif
             if motif not in self.motif_colors:
-                index = len(self.motif_colors) 
+                index = len(self.motif_colors) #% len(self.motif_palette)    # if uneven num of motifs + colors, assign pos
+                self.motif_colors[motif] = self.motif_palette[index]
 
 
         # header labels
