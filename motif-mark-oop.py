@@ -1,24 +1,25 @@
 #!/usr/bin/env python
 
 '''
-Docstring for motif-mark.motif-mark-oop
-Takes in FASTA file and generates image marking motifs along gene
-Script outputs both an svg and png
+Takes in FASTA file, txt file of motifs, and generates and image marking motifs along gene
+Script outputs a png
+Requirements: pycairo installation (conda install -n my_pycairo pycairo)
 '''
 
 import argparse
-import re # regex
+import re   # regex
 from collections import defaultdict
 import cairo
-from pathlib import Path    # so I can extract 
+from pathlib import Path    # so I can extract name for output image
 
 ## ARGPARSE ##
 def get_args():
-    '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.'''
+    '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.
+       Note: Script requires pycairo installation to run '''
     parser = argparse.ArgumentParser(description=
                                     "Program to generate an image of motifs along a gene")
     parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
-    parser.add_argument("-m", "--motif", help="path for file of all possible motifs", type=str, required=True)
+    parser.add_argument("-m", "--motif", help="path for txt file of all possible motifs", type=str, required=True)
 
     return parser.parse_args()
 
@@ -272,10 +273,10 @@ class MotifMarkRenderer:
     # IMAGE RENDERING
     def __init__(self, locations):
         # default for drawing surface
-        self.width, self.height = 1200, 600 # W x H
+        self.width, self.height = 1200, 650 # W x H
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
-        self.row_height = 120    # vertical distance b/w records
+        self.row_height = 150    # vertical distance b/w records
         self.top_margin = self.row_height    # set equal to row_height bc I want even spacing b/w records
         self.line_width = 3
 
@@ -312,15 +313,17 @@ class MotifMarkRenderer:
         self.label_x = 80    # position for label in left margin
 
         # create PNG surface
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        self.scale = 2
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width*self.scale, self.height*self.scale)
         self.ctx = cairo.Context(self.surface)
+        self.ctx.scale(self.scale, self.scale)
 
         # background
         self.ctx.set_source_rgb(1,1,1)    # need to set white background, default is transparent
         self.ctx.paint()
 
         # LEGEND #
-        self.legend_x = self.width - self.right_margin - 80
+        self.legend_x = self.width - self.right_margin - 200
         self.legend_y = 30
         self.legend_box_size = 14
         self.legend_gap = 22
@@ -329,51 +332,50 @@ class MotifMarkRenderer:
         self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)    # set font type
         self.ctx.set_font_size(self.font_size)
 
+        legend_y = self.legend_y    # keep as starting position, will need to rewrite after every loop
+
         # intron key
-        self.line_y = self.legend_y + (self.legend_box_size/2)
+        line_y = legend_y + (self.legend_box_size/2)
         self.ctx.set_line_width(self.line_width)
-        self.ctx.move_to(self.legend_x, self.line_y)
-        self.ctx.line_to(self.legend_x + self.legend_box_size, self.line_y)
+        self.ctx.move_to(self.legend_x, line_y)
+        self.ctx.line_to(self.legend_x + self.legend_box_size, line_y)
         # draw line
         self.ctx.set_source_rgb(0,0,0)    # need to set line color to black
         self.ctx.set_line_width(3)
         self.ctx.stroke()
 
-        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, self.legend_y + self.legend_box_size)
+        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, legend_y + self.legend_box_size)
         self.ctx.show_text("Intron")
 
-        self.legend_y += self.legend_gap
+        legend_y += self.legend_gap
 
         # exon
-        self.ctx.rectangle(self.legend_x, self.legend_y, self.legend_box_size, self.legend_box_size)
+        self.ctx.rectangle(self.legend_x, legend_y+4, self.legend_box_size, self.legend_box_size)
         self.ctx.fill()
-
-        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, self.legend_y + self.legend_box_size)
+        # exon key
+        self.ctx.move_to(self.legend_x + self.legend_box_size + 10, legend_y + self.legend_box_size + 4)
         self.ctx.show_text("Exon")
-
-        self.legend_y += self.legend_gap
-
 
     def render_motifs(self, regions, locations, output_png):
         grouped = self.group_headers(locations)     # header contains list[MotifLocation]
         
-        legend_y = self.legend_y    # keep as starting position, will need to rewrite after every loop
-
+        legend_y = self.legend_y  + 2.4 * self.legend_gap   # keep as starting position, will need to rewrite after every loop
+        #legend_y += self.legend_y   # space b/w exon label and motif labels
+        
         # draw legend box
         for motif_name, (r,g,b) in self.motif_colors.items():
             self.ctx.set_source_rgb(r,g,b)
-            self.ctx.rectangle(self.legend_x, self.legend_y + 20, self.legend_box_size, self.legend_box_size)
+            self.ctx.rectangle(self.legend_x, legend_y, self.legend_box_size, self.legend_box_size)
             self.ctx.fill()
 
             # text labels
             self.ctx.set_source_rgb(0,0,0)
             self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # this will apply to headers if not changed
             self.ctx.set_font_size(self.font_size)    # will also apply to headers if not changed
-            self.ctx.move_to(self.legend_x + self.legend_box_size +10, self.legend_y+20 + self.legend_box_size)
+            self.ctx.move_to(self.legend_x + self.legend_box_size +10, legend_y + self.legend_box_size)
             self.ctx.show_text(motif_name)
 
-            legend_y += self.legend_gap + 20
-            #self.legend_y += self.legend_gap + 20
+            legend_y += self.legend_gap + 5
 
         for i, region in enumerate(regions):
             y = self.top_margin + (i * self.row_height)    # space between each record vertically (lane stacking)
@@ -393,7 +395,7 @@ class MotifMarkRenderer:
             #ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
             #ctx.set_font_size(font_size)
             
-            self.ctx.move_to(self.label_x, y+5)
+            self.ctx.move_to(self.label_x, y-75)
             self.ctx.show_text(region.header)
 
             # exons
@@ -414,10 +416,10 @@ class MotifMarkRenderer:
                 lane_y = y - self.motif_offset - lane_pos * self.lane_gap
             
                 for hit in lane_hits:
-                    motif_names = hit.motif_pattern
+                    motif_name = hit.motif_pattern
                     motif_x = self.left_margin + hit.start
                     motif_w = hit.end - hit.start
-                    motif_y = y - self.motif_offset
+                    motif_y = lane_y    # bug in dev script: LANE ASSIGNMENT!!! without this other lanes aren't drawn
 
                     # draw motif in specified color
                     r,g,b = self.motif_colors[motif_name]
