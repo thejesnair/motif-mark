@@ -10,9 +10,19 @@ import argparse
 import re # regex
 from collections import defaultdict
 import cairo
+from pathlib import Path    # so I can extract 
+
+## ARGPARSE ##
+def get_args():
+    '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.'''
+    parser = argparse.ArgumentParser(description=
+                                    "Program to generate an image of motifs along a gene")
+    parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
+    parser.add_argument("-m", "--motif", help="path for file of all possible motifs", type=str, required=True)
+
+    return parser.parse_args()
 
 ## HELPER FXN ##
-
 # read in fasta
 def read_fasta(input_fa:str) -> list[tuple[str,str]]:
     ''' Parses a FASTA file and returns a list of (header, sequence) tuples
@@ -39,7 +49,6 @@ def read_fasta(input_fa:str) -> list[tuple[str,str]]:
         if current_header is not None:
             records.append((current_header, ''.join(current_seq)))
     return records
-
 
 ## CLASSES ##
  
@@ -263,7 +272,7 @@ class MotifMarkRenderer:
     # IMAGE RENDERING
     def __init__(self, locations):
         # default for drawing surface
-        self.width, self.height = 800, 800
+        self.width, self.height = 1200, 600 # W x H
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
         self.row_height = 120    # vertical distance b/w records
@@ -292,7 +301,7 @@ class MotifMarkRenderer:
         self.motif_colors = {}
 
         for loc in locations:
-            motif = loc.motif
+            motif = loc.motif_pattern
             if motif not in self.motif_colors:
                 index = len(self.motif_colors) #% len(self.motif_palette)    # if uneven num of motifs + colors, assign pos
                 self.motif_colors[motif] = self.motif_palette[index]
@@ -345,7 +354,7 @@ class MotifMarkRenderer:
         self.legend_y += self.legend_gap
 
 
-    def render_motifs(self, regions, locations):
+    def render_motifs(self, regions, locations, output_png):
         grouped = self.group_headers(locations)     # header contains list[MotifLocation]
         
         legend_y = self.legend_y    # keep as starting position, will need to rewrite after every loop
@@ -370,7 +379,7 @@ class MotifMarkRenderer:
             y = self.top_margin + (i * self.row_height)    # space between each record vertically (lane stacking)
             # i: for each record * row_gap will create even gaps
 
-            length_bp = len(region.length)
+            length_bp = len(region.sequence)
             x0 = self.left_margin    # record starting pos
             x1 = self.left_margin + length_bp  # genomic length/final ending position
 
@@ -388,7 +397,7 @@ class MotifMarkRenderer:
             self.ctx.show_text(region.header)
 
             # exons
-            for (exon_start, exon_end) in region.exons:
+            for (_, exon_start, exon_end) in region.exons:  # _ means intentionally not using this value! dont need exon_num for rendering
                 exon_x = self.left_margin + exon_start
                 exon_w = exon_end - exon_start  # how long is exon
                 exon_y = y - (self.exon_height/2)
@@ -405,7 +414,7 @@ class MotifMarkRenderer:
                 lane_y = y - self.motif_offset - lane_pos * self.lane_gap
             
                 for hit in lane_hits:
-                    motif_names = hit.motif
+                    motif_names = hit.motif_pattern
                     motif_x = self.left_margin + hit.start
                     motif_w = hit.end - hit.start
                     motif_y = y - self.motif_offset
@@ -417,67 +426,51 @@ class MotifMarkRenderer:
                     self.ctx.fill()
                     self.ctx.set_source_rgb(0,0,0)   # change back to black for next record
 
-        self.surface.write_to_png("Figure_1.png")    # hardcoded for now, can improve in future with argparse
+        self.surface.write_to_png(str(output_png))
 
 
 
 def main():
 
-    def get_args():
-        '''Takes in command line arguments for paths to motifs files, FASTA file, and output image.'''
-        parser = argparse.ArgumentParser(description=
-                                        "Program to generate an image of motifs along a gene")
-        parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
-        parser.add_argument("-m", "--motif", help="path for file of all possible motifs", type=str, required=True)
-        #parser.add_argument("-o", "--outfile", help = "name for outputted motif image (png)", type=str, required=True)
-
-        return parser.parse_args()
-
-    args = get_args()
+    # argparse/file vars
+    args = get_args()   
     input_fasta = args.file
     motif_file = args.motif
-    #image = args.outfile
-    
+    output_png = Path(input_fasta).with_suffix(".png")
+
     records = read_fasta(input_fasta)
 
     # motifs list
     with open(motif_file) as f:
-        motifs = [line.strip() for line in f]   # strips trailing space, adds motifs to list
-
-    print(motifs)   #check that properly pulls motifs
+        motif_strings = [line.strip() for line in f]   # strips trailing space, adds motifs to list
 
     # objects needed for MotifScanner
     regions = [SplicingRegion(header, seq) for header,seq in records]   # sets up objects for all fasta records
-    mode = regions[0].mode    
+    mode = regions[0].mode  
+
+    # normalize motifs (needs to happen AFTER mode assignment)
+    if mode == "DNA":
+        motif_strings = [m.upper().replace("U", "T") for m in motif_strings]
+    elif mode == "RNA":
+        motif_strings = [m.upper().replace("T", "U") for m in motif_strings]
+
     # ^ detects DNA or RNA mode for first object in list of splicingregion objects, 
     # only check once b/c all types should be same in the fasta file
     # .mode and not .mode() b/c pulling value not running fxn
-    motif_objects = [Motif(motif, mode) for motif in motifs]
+    motif_objects = [Motif(motif, mode) for motif in motif_strings]
 
     # region object contains: uppercase sequence, sequence, header
     # motif object contains: lookahead regex, length, regex
 
+    # scan everything! and put it all in MotifLocation hits
+    all_locations = []
+    for region in regions:
+        scanner = MotifScanner(region, motif_objects)
+        hits = scanner.scan()   # return list of MotifLocation
+        all_locations.extend(hits)  # adds elements individually (extend flattens), append would nest them
+
+    renderer = MotifMarkRenderer(all_locations)
+    renderer.render_motifs(regions, all_locations, output_png)
 
 if __name__ == "__main__":
-    #main()
-
-    # TESTING
-    test_region = SplicingRegion(">test", "aaGGcccTTTaGGGGG")
-    print(test_region.header)
-    print(test_region.sequence_upper)
-    print(test_region.mode)
-
-    mode = test_region.mode
-    m1 = Motif("YGCY", mode)
-
-    print(m1.pattern)
-    print(m1.lookahead_overlap)
-    print(m1.length)
-    scanner = MotifScanner(test_region, [m1])
-
-    print(scanner.region.header)
-    print(len(scanner.motifs))
-
-    print(scanner.scan())
-
-    render = MotifMarkRenderer()
+    main()
