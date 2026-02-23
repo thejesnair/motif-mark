@@ -1,0 +1,31 @@
+1. Motif defintion
+
+class Motif creates motif objects from motifs file
+object is what motif pattern to search for
+
+2. Splicing region identification
+
+class SplicingRegion creates splicing_region object using FASTA file
+object is where motifs will be searched/plotted
+
+3. Identify motif hits
+
+class MotifScanner USES:
+    - splicing_region object from SplicingRegion 
+    - motif object from Motif
+
+Scans sequence for all matches
+creates motif_location object in MotifLocation
+
+4. Generate motif image
+
+class MotifMarkRenderer USES:
+    splicing_region
+    list of motif_location objects
+
+_______________________
+
+FASTA --> SplicingRegion
+Motif file --> Motif
+SplicingRegion + Motif --> MotifScanner --> MotifLocation
+SplicingRegion + MotifLocation --> MotifMarkRenderer --> FINAL IMAGE

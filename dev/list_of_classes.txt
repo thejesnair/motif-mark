@@ -1,0 +1,40 @@
+class Motif
+    Holds one motif DEFINITION: pattern and ambiguity rules
+    (What motif I'm looking for)
+    Contains: Motif name
+
+class SplicingRegion
+    Represents one FASTA record
+    (Where I'm looking for motifs)
+    FASTA:
+        Header/id
+        full sequence
+    Intron and exon positions:
+        exon start/stop, intron ranges
+    Contains: sequence + exon/intron regions for plotting and coordinate mapping
+    
+class MotifScanner
+    Scans FASTA sequence for matches to motif
+    Returns: Identified motif locations/hits
+
+class MotifLocation
+    Holds specifications of single motif hit:
+    (Where the motif matches are found)
+        FASTA id
+        start, end
+        matched sequence
+        strand?
+    Contains: Motif
+    
+class MotifMarkRenderer (or ImageGenerator)
+    Generates the intron lines, exons boxes, and motif sections for motif image
+    Returns motif image
+
+
+_______________________
+
+Motif --> what to search for
+SplicingRegion --> where to search
+MotifScanner --> scans motif pattern in sequences
+MotifLocation --> stores each motif hit
+MotifMarkRenderer --> visualization
