@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 '''
-Takes in FASTA file, txt file of motifs, and generates and image marking motifs along gene
-Script outputs a png
+motif-mark.py generates an image marking motifs along a gene utilizing object oriented programming
+Script takes in a FASTA file and txt file of motifs and outputs a PNG
+
 Requirements: pycairo installation (conda install -n my_pycairo pycairo)
 '''
 
@@ -14,11 +15,11 @@ from pathlib import Path    # so I can extract name for output image
 
 ## ARGPARSE ##
 def get_args():
-    '''Takes in command line arguments for paths to motifs file and FASTA file
-       Note: Script requires pycairo installation to run '''
+    ''' Takes in command line arguments for paths to motifs file and FASTA file
+        Note: Script requires pycairo installation to run '''
     parser = argparse.ArgumentParser(description=
-                                    "Program to generate an image of motifs along a gene")
-    parser.add_argument("-f", "--file", help="path for fasta file", type=str, required=True)
+                                    "Program to generate a PNG of motifs along a gene")
+    parser.add_argument("-f", "--file", help="path for FASTA file", type=str, required=True)
     parser.add_argument("-m", "--motif", help="path for txt file of possible motifs", type=str, required=True)
 
     return parser.parse_args()
@@ -38,7 +39,7 @@ def read_fasta(input_fa:str) -> list[tuple[str,str]]:
         for line in in_fa:
             line = line.strip()
             if line.startswith('>'):    # new header, new record starting
-                if current_header is not None:  # if there is already have a record in store, save
+                if current_header is not None:  # if there is already a record in store, save
                     records.append((current_header, ''.join(current_seq)))
 
                 # start tracking new record
@@ -114,6 +115,7 @@ class Motif:
     def build_lookahead_overlap_regex(self) -> str:
         ''' Build regex expression for lookahead/overlap '''
         return "(?=(" + self.regex_body + "))"    # (?=...) is a lookahead assertion!
+        # https://stackoverflow.com/questions/11430863/how-to-find-overlapping-matches-with-a-regexp
 
 class SplicingRegion:
     ''' Represents FASTA record
@@ -183,18 +185,15 @@ class MotifScanner:
             Uses MotifLocation class to hold record
             Returns:
                 list[MotifLocation(header, motif pattern, start coord, end coord)] '''
-        #hits = {}    # dict of key,value pairs motif, hits
         seq = self.region.sequence_upper
         locations = []
 
         for motif in self.motifs:
             pattern = motif.lookahead_overlap    # pull out regex expression for lookahead assertion
-            #hits[motif.pattern] = []    # initialize empty list for each motif pattern
 
             for match in re.finditer(pattern, seq):    # .finditer(): https://docs.python.org/3/library/re.html#finding-all-adverbs
                 start = match.start()
                 end = start + motif.length    # comes from self.length in Motif class
-                #hits[motif.pattern].append([start, end])    # can append list to empty list value in dict
                 location = MotifLocation(
                     self.region.header,    # comes from splicingregion obj passed into motifscanner
                     motif.pattern,    # comes from motif object
@@ -297,10 +296,8 @@ class MotifMarkRenderer:
         self.motif_offset = 25 # above backbone
         self.lane_gap = 14   # vertical space b/w lanes
 
-
         # motif color, records
-        ''' Note: Only four motifs in assignment so four colors here.
-            Future changes to this script will need to for unknown number of motifs with expanded color palette + safe random color generator? '''
+        ''' Note: Only four motifs in assignment so four colors here '''
         self.motif_palette = [      # https://rgbcolorpicker.com/0-1
             (0.5, 0.4, 0.6),        # purple
             (0.30, 0.60, 0.85),     # blue
@@ -331,7 +328,7 @@ class MotifMarkRenderer:
         self.ctx.set_source_rgb(1,1,1)    # need to set white background, default is transparent
         self.ctx.paint()
 
-        # LEGEND #
+        # LEGEND
         self.legend_x = self.width - self.right_margin - 200
         self.legend_y = 30
         self.legend_box_size = 14
@@ -387,13 +384,13 @@ class MotifMarkRenderer:
 
         for i, region in enumerate(regions):
             y = self.top_margin + (i * self.row_height)    # space between each record vertically (lane stacking)
-            # i: for each record * row_gap will create even gaps
+            # i: for each record * row_height will create even gaps
 
             length_bp = len(region.sequence)
             x0 = self.left_margin    # record starting pos
             x1 = self.left_margin + length_bp  # genomic length/final ending position
 
-            # drawn backbone
+            # draw backbone
             self.ctx.move_to(x0, y)
             self.ctx.line_to(x1, y)
             self.ctx.stroke()
