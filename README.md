@@ -23,8 +23,6 @@ Output: Figure_1.png
 - MotifMarkRenderer
     - Renders final image utilizing objects from SplicingRegion and MotifLocation
 
-----------
-<br>
 
 ## Future development
 ### Planned improvements:
