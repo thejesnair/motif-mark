@@ -279,15 +279,16 @@ class MotifMarkRenderer:
         return lanes
 
     # IMAGE RENDERING
-    def __init__(self, locations):
+    def __init__(self, regions, locations):
         # default for drawing surface
-        self.width, self.height = 1200, 850 # L x H
+        n_records = len(regions)
+        self.width = 1200
         self.left_margin = 220    # clear space: can place labels in left margin!
         self.right_margin = 40
         self.row_height = 200    # vertical distance b/w records
         self.top_margin = self.row_height    # set equal to row_height bc I want even spacing b/w records
         self.line_width = 3
-
+        
         # exon
         self.exon_height = 16
 
@@ -296,13 +297,26 @@ class MotifMarkRenderer:
         self.motif_offset = 25 # above backbone
         self.lane_gap = 14   # vertical space b/w lanes
 
+        # bottom margin + height computed from last record, implemented so image can render more records
+        self.bottom_margin = 40
+
+        # y position of last record
+        if n_records == 0:
+            last_y = self.top_margin
+        else:
+            last_y = self.top_margin + (n_records - 1) * self.row_height
+
+        # canvas height
+        self.height = int(last_y + (self.exon_height/2) + self.bottom_margin)
+
         # motif color, records
-        ''' Note: Only four motifs in assignment so four colors here '''
+        ''' Note: Up to five motifs supported '''
         self.motif_palette = [      # https://rgbcolorpicker.com/0-1
             (0.5, 0.4, 0.6),        # purple
             (0.30, 0.60, 0.85),     # blue
             (0.87, 0.68, 0.33),     # orangey
-            (0.36, 0.63, 0.58)      # teal
+            (0.36, 0.63, 0.58),     # teal
+            (0.78, 0.52, 0.60)      # rose
         ]
 
         self.motif_colors = {}      # motifs and assigned colors
@@ -375,7 +389,7 @@ class MotifMarkRenderer:
 
             # text labels
             self.ctx.set_source_rgb(0,0,0)
-            self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # this will apply to headers if not changed
+            self.ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD) # this will apply to headers if not changed
             self.ctx.set_font_size(self.font_size)    # will also apply to headers if not changed
             self.ctx.move_to(self.legend_x + self.legend_box_size +10, legend_y + self.legend_box_size)
             self.ctx.show_text(motif_name)
@@ -397,7 +411,7 @@ class MotifMarkRenderer:
 
             # header label
             self.ctx.set_source_rgb(0,0,0)
-            
+
             self.ctx.move_to(self.label_x, y-140)   # HEADER SPACING FROM RECORD
             self.ctx.show_text(region.header)
 
@@ -470,7 +484,7 @@ def main():
         hits = scanner.scan()   # return list of MotifLocation
         all_locations.extend(hits)  # adds elements individually (extend flattens), append would nest them
 
-    renderer = MotifMarkRenderer(all_locations)
+    renderer = MotifMarkRenderer(regions, all_locations)
     renderer.render_motifs(regions, all_locations, output_png)
 
 if __name__ == "__main__":
