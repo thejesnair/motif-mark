@@ -26,10 +26,13 @@ Output: Figure_1.png
 ----------
 <br>
 
-Future versions of script may take into consideration:
+## Future development
+### Planned improvements:
+1. Motif hit summary report
+2. Clean header for output image (gene name instead of whole fasta header)
+3. SVG visualization (as an alternative or optional output alongside PNG)
+
+### Possible future considerations
 1. Alignment gaps
 2. Support for 4+ motifs with automatic color generation (human readable colors)
-3. Additional or longer fasta records
-4. SVG visualization (as an alternative or optional output alongside PNG)
-
-
+3. Support for additional/longer fasta records with automatic pycairo surface resizing
